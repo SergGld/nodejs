@@ -3,7 +3,8 @@ var bodyParser = require("body-parser");
 var fs = require('fs');
 
 var app = express();
- 
+ var server_port = process.env.OPENSHIFT_NODEJS_PORT || 8080
+var server_ip_address = process.env.OPENSHIFT_NODEJS_IP || '127.0.0.1'
 // создаем парсер для данных application/x-www-form-urlencoded
 var urlencodedParser = bodyParser.urlencoded({extended: false});
 
@@ -41,4 +42,6 @@ app.get("/", function(request, response){
     response.send("<h1>Главная страница</h1>");
 });
  
-app.listen(3000);
+app.listen(server_port, server_ip_address, function () {
+  console.log( "Listening on " + server_ip_address + ", port " + server_port )
+});
