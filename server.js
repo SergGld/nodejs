@@ -2,8 +2,7 @@
 var express = require('express'),
     app     = express(),
     morgan  = require('morgan');
-var bodyParser = require("body-parser");
-var fs = require('fs');    
+    
 Object.assign=require('object-assign')
 
 app.engine('html', require('ejs').renderFile);
@@ -56,25 +55,43 @@ var initDb = function(callback) {
     console.log('Connected to MongoDB at: %s', mongoURL);
   });
 };
-var urlencodedParser = bodyParser.urlencoded({extended: false});
-app.use(express.static(__dirname + "/public"));
- 
-app.post("/register", urlencodedParser, function (request, response) {
-    if(!request.body) return response.sendStatus(400);{
-    console.log(request.body);
-    }
-    var path=request.body.dir;
-    var ext=request.body.ext;
-    var files=[];
-    fs.readdir(path, function(err, items) {
-        for (var i=0;i<items.length;i++){
-            if (items[i].split('.')[1]==ext)
-            files.push(items[i]);
-        }
-        if (ext.length==0) files=items;
-        response.send(`${files}`);
+
+app.get('/', function (req, res) {
+  // try to initialize the db on every request if it's not already
+  // initialized.
+  if (!db) {
+    initDb(function(err){});
+  }
+  if (db) {
+    var col = db.collection('counts');
+    // Create a document with request IP and current time of request
+    col.insert({ip: req.ip, date: Date.now()});
+    col.count(function(err, count){
+      if (err) {
+        console.log('Error running count. Message:\n'+err);
+      }
+      res.render('index.html', { pageCountMessage : count, dbInfo: dbDetails });
     });
+  } else {
+    res.render('index.html', { pageCountMessage : null});
+  }
 });
+
+app.get('/pagecount', function (req, res) {
+  // try to initialize the db on every request if it's not already
+  // initialized.
+  if (!db) {
+    initDb(function(err){});
+  }
+  if (db) {
+    db.collection('counts').count(function(err, count ){
+      res.send('{ pageCount: ' + count + '}');
+    });
+  } else {
+    res.send('{ pageCount: -1 }');
+  }
+});
+
 // error handling
 app.use(function(err, req, res, next){
   console.error(err.stack);
